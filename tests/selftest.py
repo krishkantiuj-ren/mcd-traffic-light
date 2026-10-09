@@ -1,0 +1,138 @@
+"""验收自检 —— 对应执行计划 §9 的 T1~T6。
+
+跑法：
+    python tests/selftest.py            离线（用 data/ 快照）
+    python tests/selftest.py --live     额外跑一次真实 MCP 取数
+
+所有期望值都来自麦当劳官方营养表（158 款在售餐品），不是估算。
+"""
+from __future__ import annotations
+
+import json
+import os
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.join(ROOT, "src"))
+
+import nutrition as N  # noqa: E402
+from daylog import DayLog  # noqa: E402
+
+PASS, FAIL = [], []
+
+
+def check(name: str, got, want) -> None:
+    ok = got == want
+    (PASS if ok else FAIL).append(name)
+    mark = "PASS" if ok else "FAIL"
+    print(f"  [{mark}] {name}\n         got={got}\n        want={want}")
+
+
+def load():
+    with open(os.path.join(ROOT, "data", "menu.json"), encoding="utf-8") as fh:
+        menu = json.load(fh)
+    with open(os.path.join(ROOT, "data", "nutrition.json"), encoding="utf-8") as fh:
+        nutrition = json.load(fh)
+    return menu, nutrition
+
+
+def main() -> int:
+    menu, nutrition = load()
+    catalog = N.build_catalog(menu, nutrition)
+    print(f"\n目录：{len(catalog)} 款可计算餐品（菜单 {len(menu['meals'])} 款 ∩ 营养表 {len(nutrition)} 款）")
+
+    base_items = [{"name": "巨无霸", "qty": 1}, {"name": "薯条", "qty": 1}, {"name": "可乐", "qty": 1}]
+    targets = N.targets_for("weichi", N.DEFAULT_MODES["weichi"]["targets"])
+    totals = N.totals_of(base_items, catalog)
+    report = N.evaluate(totals, targets)
+
+    print("\nT1 维持档默认目标下的判灯")
+    check("T1 热量合计", round(totals["kcal"]), 949)
+    check("T1 蛋白质合计", round(totals["protein"]), 31)
+    check("T1 脂肪合计", round(totals["fat"]), 38)
+    check("T1 碳水合计", round(totals["carb"]), 116)
+    check("T1 钠合计", round(totals["sodium"]), 1126)
+    check("T1 钙合计", round(totals["calcium"]), 199)
+    check("T1 得分", report["score"], 58)
+    check("T1 灯色", report["light"], "amber")
+    check("T1 警示语", report["warn"], "钠超了 69%")
+    check(
+        "T1 六项灯色",
+        [report["lights"][k] for k in ("kcal", "protein", "fat", "carb", "sodium", "calcium")],
+        ["amber", "green", "red", "green", "red", "amber"],
+    )
+
+    print("\nT2 智能替换（在真实菜单里穷举，不是写死的）")
+    swaps = N.suggest_swaps(base_items, catalog, targets)
+    check("T2 替换条数", len(swaps), 1)
+    check("T2 最佳替换", [swaps[0]["from"], swaps[0]["to"]], ["薯条", "苹果片"])
+    check("T2 替换收益", swaps[0]["gains"], ["钠 −165 mg", "热量 −257 kcal"])
+    check("T2 采纳后得分", swaps[0]["scoreTo"], 82)
+    check("T2 采纳后灯色", swaps[0]["lightTo"], "green")
+    check("T2 价差（比原来更便宜）", swaps[0]["priceDelta"], -6.5)
+
+    new_items = [{"name": "巨无霸", "qty": 1}, {"name": "苹果片", "qty": 1}, {"name": "可乐", "qty": 1}]
+    new_totals = N.totals_of(new_items, catalog)
+    print("\nT4 补短板（达标型指标不足时给「加什么」）")
+    gaps = N.suggest_gaps(new_items, catalog, targets)
+    check("T4 有补短板建议", len(gaps) >= 1, True)
+    check("T4 首条建议是补钙饮品", gaps[0]["add"], "燕麦奶")
+    check("T4 钙补足到 100%", "达标" in gaps[0]["fills"], True)
+    check("T4 采纳后总分", N.evaluate(new_totals, targets)["score"], 82)
+
+    print("\nT3 个性化目标（Mifflin-St Jeor）")
+    profile = {"gender": "female", "age": 26, "height": 160, "weight": 48, "activity": 1.2}
+    computed = N.compute_modes(profile)
+    check("T3 BMR", computed["bmr"], 1189)
+    check("T3 TDEE", computed["tdee"], 1427)
+    check("T3 维持档单餐热量目标", computed["modes"]["weichi"]["targets"]["kcal"], 476)
+    check("T3 维持档单餐脂肪目标", computed["modes"]["weichi"]["targets"]["fat"], 14)
+    petite = N.evaluate(totals, computed["modes"]["weichi"]["targets"])
+    check("T3 同一顿饭的得分（变为红灯）", petite["score"], 49)
+    check("T3 同一顿饭的灯色", petite["light"], "red")
+
+    print("\nT5 跨餐累计")
+    log_path = os.path.join(ROOT, "data", "selftest_daylog.json")
+    if os.path.exists(log_path):
+        os.remove(log_path)
+    log = DayLog(log_path)
+    log.log("正餐", base_items, totals, price=48.5)
+    log.log("下午茶", [{"name": "麦乐鸡", "qty": 1}], N.totals_of([{"name": "麦乐鸡", "qty": 1}], catalog), price=14)
+    daily = N.daily_targets(targets)
+    summary = log.summary(daily)
+    check("T5 已记录餐次", summary["mealCount"], 2)
+    check("T5 当日钠累计", round(summary["eaten"]["sodium"]), 1126 + 422)
+    check("T5 钠剩余额度", round(summary["remaining"]["sodium"]), round(N.DAILY_SODIUM - 1548))
+    os.remove(log_path)
+
+    print("\nT6 等价换算（把数字变成直觉）")
+    eq = N.equivalents(totals, weight_kg=65)
+    check("T6 米饭碗数", eq["riceBowls"], 3.7)
+    check("T6 食盐克数", eq["saltGram"], 2.9)
+    check("T6 快走分钟", eq["walkMinutes"], 219)
+
+    if "--live" in sys.argv:
+        print("\nT7 真实 MCP 取数（需要 Token）")
+        from mcp_client import McpClient
+
+        client = McpClient()
+        live_nutrition = client.fetch_nutrition()
+        live_menu = client.fetch_menu("1450713")
+        live_catalog = N.build_catalog(live_menu, live_nutrition)
+        print(f"         实时菜单 {len(live_menu['meals'])} 款 / 实时可计算 {len(live_catalog)} 款")
+        print("         注：菜单按时段（早餐/正餐/下午茶/夜宵）切换，实时条数与离线快照不同属正常")
+        check("T7 营养条目数（稳定 158 款）", len(live_nutrition), len(nutrition))
+        check("T7 实时菜单非空", len(live_menu["meals"]) >= 60, True)
+        check("T7 实时目录可计算", len(live_catalog) >= 20, True)
+        live_totals = N.totals_of(base_items, live_catalog)
+        check("T7 实时数据判灯与离线一致", N.evaluate(live_totals, targets)["score"], 58)
+
+    print(f"\n{'=' * 46}\n通过 {len(PASS)} 项，失败 {len(FAIL)} 项")
+    if FAIL:
+        print("失败项：" + "，".join(FAIL))
+    print("=" * 46)
+    return 1 if FAIL else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

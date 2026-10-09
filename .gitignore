@@ -1,0 +1,22 @@
+# 凭证与本机数据：绝不提交
+.env
+*.env
+mcd_token.txt
+mcp.json
+
+# 本机当日饮食记录（用户隐私）
+data/day_log.json
+data/selftest_daylog.json
+
+# 运行产物
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# 编辑器与系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
