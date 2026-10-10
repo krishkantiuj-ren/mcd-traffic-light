@@ -209,6 +209,8 @@
   .srow .gain{margin-left:auto;font-family:var(--num);font-size:11px;font-weight:700;padding:3px 8px;border-radius:8px;background:#EAF3E9;color:var(--green);white-space:nowrap;font-variant-numeric:tabular-nums;}
   .srow .gapgain{margin-left:auto;font-family:var(--num);font-size:11px;font-weight:700;padding:3px 8px;border-radius:8px;background:#FFF4D6;color:#8A6400;white-space:nowrap;}
   .snote{font-size:10.5px;color:var(--amber);margin-top:8px;padding-top:8px;border-top:1px solid var(--panel);}
+  .strat{font-size:10.5px;color:var(--ink3);background:var(--panel);border-radius:8px;padding:5px 9px;margin-bottom:10px;line-height:1.55;}
+  .strat b{color:var(--ink2);font-weight:700;}
   .empty{font-size:11.5px;color:var(--ink3);line-height:1.7;}
   .facts{display:flex;gap:8px;margin-top:11px;padding-top:11px;border-top:1px solid var(--panel);}
   .fact{flex:1;font-size:10.5px;color:var(--ink2);line-height:1.5;}
@@ -615,11 +617,13 @@ function renderSwap(){
   cta.classList.remove('done');
   box.style.borderColor = 'var(--line)'; box.style.background = '#fff';
   if (!e.swaps.length){
-    box.innerHTML = `<div class="cap"><span>智能替换建议</span></div>
-      <div class="empty">这一餐在同类餐品里已经是最优搭配，没有既能涨分又不加价的替换方案。</div>`;
+    box.innerHTML = `<div class="cap"><span>智能替换建议</span></div>`
+      + (e.strategy ? `<div class="strat"><b>${e.modeName}策略</b>：${e.strategy}</div>` : '')
+      + `<div class="empty">这一餐在同类餐品里已经是最优搭配，没有既能涨分又不加价的替换方案。</div>`;
     cta.textContent = '当前搭配已是最优'; cta.disabled = true;
   } else {
     box.innerHTML = `<div class="cap"><span>智能替换建议</span><span>${e.report.score} → ${e.swaps[e.swaps.length-1].scoreTo} 分</span></div>`
+      + (e.strategy ? `<div class="strat"><b>${e.modeName}策略</b>：${e.strategy}</div>` : '')
       + e.swaps.map(s => `<div class="srow"><span class="from">${s.from}</span><span class="arr">→</span><span class="to">${s.to}</span><span class="gain">${s.gains.join(' · ')}</span></div>`).join('')
       + (e.swaps.some(s => s.couponLoss > 0)
           ? `<div class="snote">⚠ 替换会浪费：${e.swaps.filter(s=>s.couponLoss>0).map(s=>s.lostCoupon).join('、')}</div>` : '')
@@ -634,6 +638,7 @@ function renderGaps(){
   if (!e.gaps.length){ box.style.display = 'none'; return; }
   box.style.display = 'block';
   box.innerHTML = `<div class="cap"><span>补短板 · 加什么</span></div>`
+    + (e.strategy ? `<div class="strat"><b>${e.modeName}策略</b>：${e.strategy}</div>` : '')
     + e.gaps.map(g => `<div class="srow">
         <span class="to">＋ ${g.add}</span>
         <span style="color:var(--ink3)">${g.kcal} kcal · ¥${money(g.price)}</span>

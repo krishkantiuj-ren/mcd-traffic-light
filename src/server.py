@@ -112,8 +112,8 @@ def evaluate_payload(body: dict) -> dict:
     catalog = STATE["catalog"]
     totals = N.totals_of(items, catalog)
     report = N.evaluate(totals, targets)
-    swaps = N.suggest_swaps(items, catalog, targets, coupons=STATE["coupons"]["mine"])
-    gaps = N.suggest_gaps(items, catalog, targets)
+    swaps = N.suggest_swaps(items, catalog, targets, mode=mode, coupons=STATE["coupons"]["mine"])
+    gaps = N.suggest_gaps(items, catalog, targets, mode=mode)
 
     price_before = N.price_of(items, catalog)
     after_items = _apply_swaps(items, swaps)
@@ -125,6 +125,7 @@ def evaluate_payload(body: dict) -> dict:
     return {
         "mode": mode,
         "modeName": modes.get(mode, {}).get("name", ""),
+        "strategy": N.strategy_of(mode)["focus"],
         "profile": computed,
         "targets": targets,
         "totals": {k: round(v, 1) for k, v in totals.items()},

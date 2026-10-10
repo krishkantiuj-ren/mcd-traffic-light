@@ -53,22 +53,22 @@ def main() -> int:
     check("T1 碳水合计", round(totals["carb"]), 116)
     check("T1 钠合计", round(totals["sodium"]), 1126)
     check("T1 钙合计", round(totals["calcium"]), 199)
-    check("T1 得分", report["score"], 58)
-    check("T1 灯色", report["light"], "amber")
+    check("T1 得分", report["score"], 52)
+    check("T1 灯色", report["light"], "red")
     check("T1 警示语", report["warn"], "钠超了 69%")
     check(
         "T1 六项灯色",
         [report["lights"][k] for k in ("kcal", "protein", "fat", "carb", "sodium", "calcium")],
-        ["amber", "green", "red", "green", "red", "amber"],
+        ["amber", "amber", "red", "green", "red", "amber"],
     )
 
     print("\nT2 智能替换（在真实菜单里穷举，不是写死的）")
     swaps = N.suggest_swaps(base_items, catalog, targets)
-    check("T2 替换条数", len(swaps), 1)
+    check("T2 替换条数", len(swaps), 2)
     check("T2 最佳替换", [swaps[0]["from"], swaps[0]["to"]], ["薯条", "苹果片"])
     check("T2 替换收益", swaps[0]["gains"], ["钠 −165 mg", "热量 −257 kcal"])
-    check("T2 采纳后得分", swaps[0]["scoreTo"], 82)
-    check("T2 采纳后灯色", swaps[0]["lightTo"], "green")
+    check("T2 采纳后得分", swaps[0]["scoreTo"], 76)
+    check("T2 采纳后灯色", swaps[0]["lightTo"], "amber")
     check("T2 价差（比原来更便宜）", swaps[0]["priceDelta"], -6.5)
 
     new_items = [{"name": "巨无霸", "qty": 1}, {"name": "苹果片", "qty": 1}, {"name": "可乐", "qty": 1}]
@@ -76,9 +76,9 @@ def main() -> int:
     print("\nT4 补短板（达标型指标不足时给「加什么」）")
     gaps = N.suggest_gaps(new_items, catalog, targets)
     check("T4 有补短板建议", len(gaps) >= 1, True)
-    check("T4 首条建议是补钙饮品", gaps[0]["add"], "燕麦奶")
+    check("T4 首条建议是补钙补蛋白饮品", gaps[0]["add"], "牛奶")
     check("T4 钙补足到 100%", "达标" in gaps[0]["fills"], True)
-    check("T4 采纳后总分", N.evaluate(new_totals, targets)["score"], 82)
+    check("T4 采纳后总分", N.evaluate(new_totals, targets)["score"], 76)
 
     print("\nT3 个性化目标（Mifflin-St Jeor）")
     profile = {"gender": "female", "age": 26, "height": 160, "weight": 48, "activity": 1.2}
@@ -86,7 +86,7 @@ def main() -> int:
     check("T3 BMR", computed["bmr"], 1189)
     check("T3 TDEE", computed["tdee"], 1427)
     check("T3 维持档单餐热量目标", computed["modes"]["weichi"]["targets"]["kcal"], 476)
-    check("T3 维持档单餐脂肪目标", computed["modes"]["weichi"]["targets"]["fat"], 14)
+    check("T3 维持档单餐脂肪目标", computed["modes"]["weichi"]["targets"]["fat"], 15)
     petite = N.evaluate(totals, computed["modes"]["weichi"]["targets"])
     check("T3 同一顿饭的得分（变为红灯）", petite["score"], 49)
     check("T3 同一顿饭的灯色", petite["light"], "red")
@@ -111,6 +111,51 @@ def main() -> int:
     check("T6 食盐克数", eq["saltGram"], 2.9)
     check("T6 快走分钟", eq["walkMinutes"], 219)
 
+    print("\nT8 三档推荐必须分化（防止退化成一个方案×三个及格线）")
+
+    # 同一份餐盘，逐档跑（默认模式目标）
+    per_mode = {}
+    for mode in N.MODE_ORDER:
+        t = N.targets_for(mode, N.DEFAULT_MODES[mode]["targets"])
+        per_mode[mode] = {
+            "swaps": [(x["from"], x["to"]) for x in
+                      N.suggest_swaps(base_items, catalog, t, mode=mode)],
+            "gaps": [x["add"] for x in
+                     N.suggest_gaps(base_items, catalog, t, mode=mode)],
+        }
+
+    # ① 硬性：减脂与增肌的「补短板」不得完全相同
+    #    （两档诉求相反，若结果一致说明策略没生效）
+    check("T8 减脂/增肌补短板不全同",
+          per_mode["jianzhi"]["gaps"] != per_mode["zengji"]["gaps"], True)
+
+    # ② 语义：减脂档不得把「高糖高脂甜品」推成替换目标
+    dessert_bad = [to for _, to in per_mode["jianzhi"]["swaps"]
+                   if any(b in to for b in N.DESSERT_BAN)]
+    check("T8 减脂档不推高糖甜品", dessert_bad, [])
+
+    # ③ 语义：减脂档不得把「含糖饮料」推成补短板项
+    drink_bad = [a for a in per_mode["jianzhi"]["gaps"]
+                 if any(b in a for b in N.SUGARY_DRINK_BAN)]
+    check("T8 减脂档不推含糖饮料", drink_bad, [])
+
+    # ④ 语义：增肌档的补短板里应出现高蛋白项（牛奶/鸡/蛋白/燕麦）
+    protein_hint = ("牛奶", "鸡", "蛋白", "燕麦")
+    check("T8 增肌档补蛋白",
+          any(any(h in a for h in protein_hint) for a in per_mode["zengji"]["gaps"]), True)
+
+    # ⑤ 每档都必须给得出建议（不能因为硬约束过强而全空）
+    check("T8 三档均能给出建议",
+          all(v["swaps"] or v["gaps"] for v in per_mode.values()), True)
+
+    # ⑥ 语义：至少两档的替换项不同（「方案变了」的肉眼证据）
+    distinct = {tuple(v["swaps"]) for v in per_mode.values()}
+    check("T8 替换方案至少两档不同", len(distinct) >= 2, True)
+
+    print("         三档实测：")
+    for mode in N.MODE_ORDER:
+        print(f"           {N.DEFAULT_MODES[mode]['name']}  swaps={per_mode[mode]['swaps']}  gaps={per_mode[mode]['gaps']}")
+
     if "--live" in sys.argv:
         print("\nT7 真实 MCP 取数（需要 Token）")
         from mcp_client import McpClient
@@ -125,7 +170,7 @@ def main() -> int:
         check("T7 实时菜单非空", len(live_menu["meals"]) >= 60, True)
         check("T7 实时目录可计算", len(live_catalog) >= 20, True)
         live_totals = N.totals_of(base_items, live_catalog)
-        check("T7 实时数据判灯与离线一致", N.evaluate(live_totals, targets)["score"], 58)
+        check("T7 实时数据判灯与离线一致", N.evaluate(live_totals, targets)["score"], 52)
 
     print(f"\n{'=' * 46}\n通过 {len(PASS)} 项，失败 {len(FAIL)} 项")
     if FAIL:

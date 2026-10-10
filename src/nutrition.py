@@ -35,10 +35,56 @@ NUT_FIELDS = {
 # 默认单餐目标（通用成人参考，未定制身体数据时使用）
 DEFAULT_MODES: dict[str, dict] = {
     "jianzhi": {"name": "减脂档", "targets": {"kcal": 500, "protein": 28, "fat": 17, "carb": 40, "sodium": 600, "calcium": 267}},
-    "weichi": {"name": "维持档", "targets": {"kcal": 700, "protein": 25, "fat": 23, "carb": 50, "sodium": 667, "calcium": 267}},
+    "weichi": {"name": "维持档", "targets": {"kcal": 700, "protein": 32, "fat": 24, "carb": 50, "sodium": 667, "calcium": 267}},
     "zengji": {"name": "增肌档", "targets": {"kcal": 850, "protein": 38, "fat": 27, "carb": 65, "sodium": 700, "calcium": 300}},
 }
 MODE_ORDER = ["jianzhi", "weichi", "zengji"]
+
+# 高糖甜品/含糖饮料禁用词（减脂档不得推这些 —— 这是「定制」可信度的来源）
+DESSERT_BAN = ("新地", "圆筒", "冰淇淋", "奥利奥", "麦旋风", "派")
+SUGARY_DRINK_BAN = ("可乐", "雪碧", "芬达", "美汁源", "阳光柠檬")
+
+# 每档的推荐策略：让 suggest_swaps / suggest_gaps 真正认识档位，
+# 而不是「一个方案 × 三个及格线」。weights 只放大真正关心的指标，
+# 归一化后平均仍为 1，所以原有 _improvement 语义不被破坏。
+MODE_STRATEGY: dict[str, dict] = {
+    "jianzhi": {
+        "name": "减脂档",
+        "focus": "优先压热量、脂肪、钠，蛋白只要不掉档",
+        "weights": {"kcal": 1.6, "fat": 1.5, "sodium": 1.4, "protein": 0.8, "carb": 1.0, "calcium": 1.0},
+        "spread_penalty": 1.0,        # 惩罚偏科的程度
+        "gap_kcal_cap": 120.0,        # 补短板时最多加多少热量
+        "hard": {
+            "protein_floor_ratio": 0.9,              # 蛋白不得低于目标 90%
+            "ban": DESSERT_BAN + SUGARY_DRINK_BAN,   # 不推高糖甜品/含糖饮料
+        },
+    },
+    "weichi": {
+        "name": "维持档",
+        "focus": "优先六项全绿，均衡不偏科",
+        "weights": {"kcal": 1.0, "fat": 1.0, "sodium": 1.0, "protein": 1.0, "carb": 1.0, "calcium": 1.0},
+        "spread_penalty": 2.0,        # 最看重均衡
+        "gap_kcal_cap": 200.0,
+        "hard": {},
+    },
+    "zengji": {
+        "name": "增肌档",
+        "focus": "优先补蛋白与碳水，允许热量上浮",
+        "weights": {"protein": 1.8, "carb": 1.5, "calcium": 1.2, "kcal": 0.7, "fat": 0.9, "sodium": 0.9},
+        "spread_penalty": 0.6,
+        "gap_kcal_cap": 400.0,
+        "hard": {
+            "no_new_red": ("fat", "sodium"),        # 不把脂肪/钠吃成红
+            "focus_no_worse": ("protein",),          # 蛋白只涨不跌
+            "ban": DESSERT_BAN,                      # 增肌也不推高糖甜品
+        },
+    },
+}
+
+
+def strategy_of(mode: str | None) -> dict:
+    """取某档的策略；未知档位回退到维持档，保证向后兼容。"""
+    return MODE_STRATEGY.get(mode or "weichi", MODE_STRATEGY["weichi"])
 ACTIVITY_LEVELS = {"久坐": 1.2, "轻度": 1.375, "中度": 1.55}
 # 每日与体重无关的上限/推荐量（世界卫生组织 / 膳食指南）
 DAILY_SODIUM = 2000.0
@@ -216,8 +262,10 @@ def compute_modes(profile: dict | None) -> dict:
         "weichi": float(tdee),
         "zengji": float(tdee + 300),
     }
-    protein_per_kg = {"jianzhi": 1.8, "weichi": 1.2, "zengji": 1.8}
-    fat_ratio = {"jianzhi": 0.22, "weichi": 0.27, "zengji": 0.25}
+    # 蛋白目标必须随档位单调上升：维持(1.6) 夹在 减脂/增肌(1.8) 之间，
+    # 修掉旧版 weichi=1.2 导致「维持档蛋白目标反而低于减脂档」的倒挂。
+    protein_per_kg = {"jianzhi": 1.8, "weichi": 1.6, "zengji": 1.8}
+    fat_ratio = {"jianzhi": 0.20, "weichi": 0.28, "zengji": 0.30}
 
     modes = {}
     for mode in MODE_ORDER:
@@ -342,10 +390,80 @@ def coupon_loss(entry: dict, partner: dict, coupons: list[dict] | None) -> tuple
     return 0.0, None
 
 
+def _name_banned(name: str, ban: tuple[str, ...]) -> bool:
+    """餐品名里是否含该档禁用的关键词（高糖甜品 / 含糖饮料）。"""
+    text = norm_name(name)
+    return any(word in text for word in ban)
+
+
+def _weighted_series(before: dict, after: dict, targets: dict, weights: dict) -> float:
+    """逐指标加权的连续型收益，再除以平均权重，保证与 _improvement 同量纲。"""
+    total = 0.0
+    for metric in METRICS:
+        target = float(targets.get(metric["key"], 0))
+        if target <= 0:
+            continue
+        b = before.get(metric["key"], 0.0) / target
+        a = after.get(metric["key"], 0.0) / target
+        if metric["cap"]:
+            delta = max(0.0, b - a) if b > 1 else 0.0
+        else:
+            delta = max(0.0, min(b, 1.0) - min(a, 1.0))
+        total += delta * float(weights.get(metric["key"], 1.0))
+    keys = {m["key"] for m in METRICS}
+    mean_weight = sum(float(weights.get(k, 1.0)) for k in keys) / len(keys) or 1.0
+    return total / mean_weight
+
+
+def _spread(ratios: dict) -> float:
+    """最高与最低指标比值之差 —— 越小越「均衡」，用来惩罚按下一个、翘起另一个。"""
+    values = [float(ratios.get(m["key"], 0.0)) for m in METRICS]
+    if not values:
+        return 0.0
+    return max(0.0, max(values) - min(values))
+
+
+def _ratios(totals: dict, targets: dict) -> dict:
+    out = {}
+    for metric in METRICS:
+        target = float(targets.get(metric["key"], 0))
+        out[metric["key"]] = (totals.get(metric["key"], 0.0) / target) if target > 0 else 0.0
+    return out
+
+
+def _violates_hard(after_totals: dict, targets: dict, before_lights: dict, hard: dict) -> bool:
+    """该档硬约束检查：命中任一条件即丢弃该候选。"""
+    if not hard:
+        return False
+    floor_ratio = hard.get("protein_floor_ratio")
+    if floor_ratio is not None:
+        protein_target = float(targets.get("protein", 0))
+        if protein_target > 0 and after_totals.get("protein", 0.0) < protein_target * float(floor_ratio):
+            return True
+    for key in hard.get("no_new_red", ()):
+        target = float(targets.get(key, 0))
+        if target <= 0:
+            continue
+        metric = next((m for m in METRICS if m["key"] == key), None)
+        if metric and level_of(metric, after_totals.get(key, 0.0), target) == "red" and before_lights.get(key) != "red":
+            return True
+    return False
+
+
+def _loses_focus_metric(before_totals: dict, after_totals: dict, targets: dict, hard: dict) -> bool:
+    """该档的重点补短板指标（protein 等）不得因为一次替换而变差 ——
+    否则「换一份小食」会把蛋白越换越低，与增肌档诉求背道而驰。"""
+    for key in hard.get("focus_no_worse", ()):
+        if after_totals.get(key, 0.0) < before_totals.get(key, 0.0) - 0.5:
+            return True
+    return False
+
+
 def suggest_swaps(
     items: list[dict],
     catalog: dict[str, dict],
     targets: dict,
+    mode: str = "weichi",
     coupons: list[dict] | None = None,
     max_price_delta: float = 5.0,
     top: int = 2,
@@ -355,7 +473,16 @@ def suggest_swaps(
     采用**贪心逐次**策略：每挑出一个替换就把它落到餐盘上，再基于新餐盘找下一个。
     这样多个替换之间是叠加生效的，不会出现"单独看都没用、合起来才有用"被漏掉的情况。
     合格条件：总分不降，且要么涨分、要么明显缩小超标幅度（improvement > 0）。
+
+    `mode` 决定这一档「往哪推」：weights 给关心指标加码、spread_penalty 惩罚偏科、
+    hard 是硬约束（减脂不推高糖甜品/含糖饮料、蛋白不掉档；增肌不把脂肪/钠吃成红）。
     """
+    strat = strategy_of(mode)
+    weights = strat["weights"]
+    spread_penalty = float(strat["spread_penalty"])
+    hard = strat.get("hard") or {}
+    ban = tuple(hard.get("ban") or ())
+
     current = [{"name": it.get("name", ""), "qty": float(it.get("qty", 1) or 1)} for it in items]
     chosen: list[dict] = []
     used_slots: set[int] = set()
@@ -364,6 +491,7 @@ def suggest_swaps(
     for _ in range(max(0, top)):
         base_totals = totals_of(current, catalog)
         base = evaluate(base_totals, targets)
+        base_spread = _spread(_ratios(base_totals, targets))
         best: dict | None = None
 
         for idx, item in enumerate(current):
@@ -376,6 +504,8 @@ def suggest_swaps(
             for partner in pool:
                 if partner["name"] == entry["name"] or partner["role"] != entry["role"]:
                     continue
+                if ban and _name_banned(partner["name"], ban):
+                    continue
                 loss, lost_coupon = coupon_loss(entry, partner, coupons)
                 price_delta = round(partner["price"] * qty - entry["price"] * qty, 2)
                 if price_delta + loss > max_price_delta:
@@ -383,14 +513,19 @@ def suggest_swaps(
                 trial = list(current)
                 trial[idx] = {"name": partner["name"], "qty": qty}
                 after_totals = totals_of(trial, catalog)
+                if _violates_hard(after_totals, targets, base["lights"], hard):
+                    continue
+                if _loses_focus_metric(base_totals, after_totals, targets, hard):
+                    continue
                 after = evaluate(after_totals, targets)
                 score_gain = after["score"] - base["score"]
-                improvement = _improvement(base_totals, after_totals, targets)
+                improvement = _weighted_series(base_totals, after_totals, targets, weights)
                 if score_gain < 0 or (score_gain == 0 and improvement <= 0.05):
                     continue
                 gains = _metric_gains(entry, partner, qty)
                 if not gains:
                     continue
+                spread_delta = _spread(_ratios(after_totals, targets)) - base_spread
                 candidate = {
                     "from": entry["name"],
                     "to": partner["name"],
@@ -405,7 +540,8 @@ def suggest_swaps(
                     "gains": gains,
                     "slot": idx,
                     "newTotals": after_totals,
-                    "_rank": score_gain * 10 + improvement - 0.5 * (price_delta + loss),
+                    "_rank": (score_gain * 10 + improvement * 4 - spread_penalty * spread_delta
+                              - 0.5 * (price_delta + loss)),
                 }
                 if best is None or candidate["_rank"] > best["_rank"]:
                     best = candidate
@@ -459,10 +595,21 @@ def suggest_gaps(
     items: list[dict],
     catalog: dict[str, dict],
     targets: dict,
+    mode: str = "weichi",
     top: int = 2,
-    max_added_kcal: float = 200.0,
+    max_added_kcal: float | None = None,
 ) -> list[dict]:
-    """补短板：达标型指标不足时，推荐加什么而不是减什么。"""
+    """补短板：达标型指标不足时，推荐加什么而不是减什么。
+
+    `mode` 决定这一档该往哪个缺口使劲：按该档 weights 给 deficits 加权，
+    并按 gap_kcal_cap 限制「为了补短板额外吃进多少热量」。
+    """
+    strat = strategy_of(mode)
+    weights = strat["weights"]
+    ban = tuple((strat.get("hard") or {}).get("ban") or ())
+    if max_added_kcal is None:
+        max_added_kcal = float(strat["gap_kcal_cap"])
+
     totals = totals_of(items, catalog)
     deficits = {}
     for metric in METRICS:
@@ -479,14 +626,19 @@ def suggest_gaps(
     for entry in catalog.values():
         if entry["name"] in in_tray or entry["role"] not in ("side", "drink", "dessert"):
             continue
+        if ban and _name_banned(entry["name"], ban):
+            continue
         kcal = entry["nut"]["kcal"]
         if kcal > max_added_kcal:
             continue
-        filled = sum(min(missing, entry["nut"][key]) for key, missing in deficits.items())
+        # 按档位加权后的缺口填补量 —— 增肌档对蛋白/碳水更敏感，减脂档对蛋白权重低
+        filled = sum(
+            min(missing, entry["nut"][key]) * float(weights.get(key, 1.0))
+            for key, missing in deficits.items()
+        )
         if filled <= 0:
             continue
-        # 营养密度：每 100 kcal 能补多少缺口 —— 避免推荐"热量高但勉强够量"的选项
-        density = sum(entry["nut"][key] for key in deficits) / max(kcal, 40) * 100
+        density = sum(entry["nut"][key] * float(weights.get(key, 1.0)) for key in deficits) / max(kcal, 40) * 100
         candidates.append(
             {
                 "add": entry["name"],
