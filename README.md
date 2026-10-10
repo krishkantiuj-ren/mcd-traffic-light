@@ -117,13 +117,15 @@ web/index.html        ← 界面：沉浸式红绿灯顶栏，颜色即结论
 ### 目录
 
 ```
-src/mcp_client.py    MCP 客户端（JSON-RPC over Streamable HTTP）
-src/nutrition.py     营养引擎（无 IO，纯函数，可单测）
-src/daylog.py        当日累计
-src/server.py        本地服务与 API
-web/index.html       前端界面
-data/                离线快照（菜单 101 款 / 营养表 158 款）
-tests/selftest.py    验收自检
+src/mcp_client.py     MCP 客户端（JSON-RPC over Streamable HTTP，零依赖）
+src/nutrition.py      营养引擎（无 IO，纯函数，可单测）
+src/daylog.py         当日累计
+src/server.py         本地服务与 API
+web/index.html        前端界面
+data/                 离线快照（菜单 101 款 / 营养表 158 款）
+tests/selftest.py     验收自检（43 项）
+MCP_INTEGRATION.md    用到的 MCP Tool 与调用流程说明
+CONTEST_DECLARATION.md 参赛声明（官方原版）
 ```
 
 ---
@@ -144,7 +146,7 @@ tests/selftest.py    验收自检
 - 本项目**只谈麦当劳自己的餐品**，不做与其他品牌的任何对比。
 - 项目输出仅供参考，不构成医疗或营养专业建议；实际餐品信息以麦当劳官方渠道为准。
 - 仓库内**不含任何真实 Token、密钥或他人个人信息**，配置文件仅使用环境变量占位符（见 `mcp-config.example.json`）。
-- 参赛声明见 [CONTEST_DECLARATION.md](CONTEST_DECLARATION.md)。
+- 参赛声明见 [CONTEST_DECLARATION.md](CONTEST_DECLARATION.md)；MCP 接入细节见 [MCP_INTEGRATION.md](MCP_INTEGRATION.md)。
 
 ## 许可
 
