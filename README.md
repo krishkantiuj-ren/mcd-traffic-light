@@ -1,6 +1,6 @@
 <p align="center">
   <img src="assets/01-主界面-采纳前.png" width="300" alt="主界面">
-  <img src="assets/02-采纳后-绿灯.png" width="300" alt="采纳后">
+  <img src="assets/02-滚动-吸顶压缩态.png" width="300" alt="滚动时结论吸顶">
 </p>
 
 <h1 align="center">麦麦营养红绿灯</h1>
