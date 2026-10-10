@@ -15,8 +15,7 @@
   *{box-sizing:border-box;margin:0;padding:0;}
   body{
     min-height:100vh;padding:36px 20px 56px;
-    background:var(--page);
-    font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",-apple-system,sans-serif;
+    background:var(--page);    font-family:"PingFang SC","Microsoft YaHei","Noto Sans SC",-apple-system,sans-serif;
     color:var(--ink);-webkit-font-smoothing:antialiased;
     display:flex;flex-direction:column;align-items:center;gap:20px;
   }
@@ -54,7 +53,8 @@
   .today .meter{margin-top:13px;height:5px;border-radius:3px;background:#ECE7DD;overflow:hidden;}
   .today .meter i{display:block;height:100%;border-radius:3px;background:var(--green);width:0;transition:width .6s;}
   .today .meter i.warn{background:var(--red);}
-  .board .foot{margin-top:auto;padding-top:16px;border-top:1px solid #E2DCD0;font-size:11.5px;line-height:1.85;color:var(--ink3);}
+  .board .foot{margin-top:auto;padding-top:16px;border-top:1px solid #E2DCD0;font-size:11.5px;line-height:1.9;
+               color:var(--ink3);text-wrap:balance;}
   .board .foot b{color:var(--ink2);font-weight:600;}
   .scr{
     width:340px;background:#fff;border-radius:36px;overflow:hidden;
@@ -208,7 +208,8 @@
   .tab.on{color:var(--red);font-weight:700;}
   .tab.on svg{stroke:var(--red);}
 
-  .caption{font-size:12.5px;color:var(--ink3);text-align:center;max-width:760px;line-height:1.8;}
+  .caption{font-size:12px;color:var(--ink3);text-align:center;max-width:640px;line-height:2;
+           margin-top:2px;letter-spacing:.1px;text-wrap:balance;}
   .caption b{color:var(--ink2);font-weight:600;}
 
   /* ===== 弹层 ===== */
@@ -282,7 +283,7 @@
       <div class="d"><i>3</i><span><b>跨餐累计</b> —— 单餐绿灯不等于一天健康，
         顶部实时显示"今日已吃几餐、本餐还能吃多少钠"。</span></div>
       <div class="d"><i>4</i><span><b>不让健康建议变成多花钱</b> —— 手里有券时，
-        替换方案会计算券损失。</span></div>
+        替换方案会算券损失。</span></div>
     </div>
 
     <div class="today">
@@ -296,8 +297,8 @@
     </div>
 
     <p class="foot">
-      数据来自麦当劳官方 MCP 实时接口（<b>mcp.mcd.cn</b>），断网自动降级到本地快照。<br>
-      只谈麦当劳自己的餐品，不做任何跨品牌对比。输出仅供参考，不构成医疗或营养建议。
+      数据来自麦当劳官方 MCP 实时接口 <b>mcp.mcd.cn</b>，断网自动降级到本地快照。<br>
+      只谈麦当劳自己的餐品，不做跨品牌对比；仅供参考，不构成专业建议。
     </p>
   </aside>
   <div class="segwrap" id="segwrap">
@@ -360,10 +361,9 @@
 </div>
 
 <p class="caption">
-  <b>麦麦营养红绿灯</b> —— 取数交给 MCP，算术交给代码。判灯、打分、替换推荐全部由确定性算法完成，
-  餐品图片与营养值实时来自麦当劳官方 MCP；填写身体数据后，目标按 Mifflin-St Jeor 公式自动重算。
+  <b>麦麦营养红绿灯</b>　取数交给 MCP，算术交给代码 —— 判灯、打分、替换推荐全部由确定性算法完成。<br>
+  餐品图片与营养值实时来自麦当劳官方 MCP，填写身体数据后按 Mifflin-St Jeor 公式重算目标。
 </p>
-
 <div class="mask" id="mask"></div>
 
 <script>
