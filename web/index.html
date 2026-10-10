@@ -20,7 +20,30 @@
     color:var(--ink);-webkit-font-smoothing:antialiased;
     display:flex;flex-direction:column;align-items:center;gap:20px;
   }
-  .stage{display:flex;gap:48px;align-items:flex-start;flex-wrap:wrap;justify-content:center;width:100%;}
+  .stage{display:flex;gap:44px;align-items:flex-start;flex-wrap:wrap;justify-content:center;width:100%;}
+  /* ===== 展示台：只在电脑（宽屏）显示，把两侧留白变成信息位 ===== */
+  .board{width:392px;flex:0 0 auto;padding-top:6px;}
+  .board .brand{display:flex;align-items:center;gap:9px;margin-bottom:14px;}
+  .board .brand svg{width:26px;height:26px;flex:0 0 auto;}
+  .board .brand span{font-size:13px;font-weight:700;color:#8A6400;letter-spacing:.6px;}
+  .board h2{font-size:28px;font-weight:800;line-height:1.24;letter-spacing:-.4px;}
+  .board h2 em{font-style:normal;color:var(--red);}
+  .board .lede{font-size:13.5px;line-height:1.85;color:var(--ink2);margin-top:12px;}
+  .board .lede b{color:var(--ink);font-weight:700;}
+  .board .kicker{margin-top:22px;font-size:11px;font-weight:700;letter-spacing:1.6px;color:var(--ink3);}
+  .steps{display:flex;align-items:stretch;gap:0;margin-top:11px;}
+  .steps .s{flex:1;background:#fff;border:1px solid var(--line);border-radius:13px;padding:11px 9px 12px;text-align:center;}
+  .steps .s .n{font-family:var(--num);font-size:19px;font-weight:800;color:var(--red);line-height:1;}
+  .steps .s .t{font-size:12px;font-weight:700;margin-top:6px;}
+  .steps .s .d{font-size:10.5px;color:var(--ink3);margin-top:3px;line-height:1.45;}
+  .steps .a{flex:0 0 16px;display:flex;align-items:center;justify-content:center;color:#C6BFB2;font-size:13px;}
+  .diff{margin-top:11px;display:flex;flex-direction:column;gap:8px;}
+  .diff .d{display:flex;gap:9px;font-size:12.5px;line-height:1.7;color:var(--ink2);}
+  .diff .d i{flex:0 0 auto;width:16px;height:16px;margin-top:3px;border-radius:50%;background:#FFF4D6;
+             color:#8A6400;font-style:normal;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+  .diff .d b{color:var(--ink);font-weight:700;}
+  .board .foot{margin-top:20px;padding-top:13px;border-top:1px solid #E2DCD0;font-size:11.5px;line-height:1.8;color:var(--ink3);}
+  .board .foot b{color:var(--ink2);font-weight:600;}
   .scr{
     width:340px;background:#fff;border-radius:36px;overflow:hidden;
     border:1px solid #E5E0D6;
@@ -32,7 +55,11 @@
     body{padding:0;}
     .stage{display:block;width:100%;}
     .scr{width:100%;max-width:520px;margin:0 auto;border-radius:0;border:none;height:100vh;height:100dvh;}
-    .caption{display:none;}
+    .caption,.board{display:none;}
+  }
+  /* 中等宽度：展示台移到卡片下方，避免挤成一团 */
+  @media (min-width:821px) and (max-width:1140px){
+    .board{width:340px;}
   }
   .statusbar{
     flex:0 0 36px;display:flex;align-items:center;justify-content:space-between;
@@ -199,6 +226,48 @@
 <body>
 
 <div class="stage">
+
+  <aside class="board">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none"><path d="M3 19 C3 9, 8 5, 12 5 C16 5, 21 9, 21 19" stroke="#FFC72C" stroke-width="3.4" stroke-linecap="round"/></svg>
+      <span>基于麦当劳官方 MCP</span>
+    </div>
+    <h2>点餐那一刻，<br>帮你判断<em>这一顿行不行</em>。</h2>
+    <p class="lede">
+      不是"这个汉堡多少卡"，而是"我这套搭配到底超没超、该换哪一样"。
+      判灯、打分、替换建议全部由<b>确定性算法</b>完成 —— 不让大模型口算营养与价格，
+      所以每个数字都可以复现、可以验证。
+    </p>
+
+    <div class="kicker">四步闭环</div>
+    <div class="steps">
+      <div class="s"><div class="n">算</div><div class="t">取真实营养</div><div class="d">官方接口</div></div>
+      <div class="a">›</div>
+      <div class="s"><div class="n">判</div><div class="t">红黄绿灯</div><div class="d">六项指标</div></div>
+      <div class="a">›</div>
+      <div class="s"><div class="n">换</div><div class="t">一键替换</div><div class="d">涨分不加价</div></div>
+      <div class="a">›</div>
+      <div class="s"><div class="n">晒</div><div class="t">报告卡</div><div class="d">可截图</div></div>
+    </div>
+
+    <div class="kicker">和同类工具差在哪</div>
+    <div class="diff">
+      <div class="d"><i>1</i><span><b>标准按你的身体算</b> —— 填身高体重后走 Mifflin-St Jeor 公式，
+        48kg 和 90kg 的人吃同一顿饭会亮不同的灯。同类工具全用固定标准。</span></div>
+      <div class="d"><i>2</i><span><b>只做"减"是不完整的</b> —— 钙不够时它会告诉你加什么，
+        而不是只把超标项标红。</span></div>
+      <div class="d"><i>3</i><span><b>跨餐累计</b> —— 单餐绿灯不等于一天健康，
+        顶部实时显示"今日已吃几餐、本餐还能吃多少钠"。</span></div>
+      <div class="d"><i>4</i><span><b>不让健康建议变成多花钱</b> —— 手里有券时，
+        替换方案会计算券损失。</span></div>
+    </div>
+
+    <p class="foot">
+      数据来自麦当劳官方 MCP 实时接口（<b>mcp.mcd.cn</b>），断网自动降级到本地快照。<br>
+      只谈麦当劳自己的餐品，不做任何跨品牌对比。输出仅供参考，不构成医疗或营养建议。
+    </p>
+  </aside>
+
   <div class="segwrap" id="segwrap">
     <div class="prow" id="profilebar">
       <span class="pico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#DA291C" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg></span>

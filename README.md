@@ -1,6 +1,9 @@
 <p align="center">
-  <img src="assets/01-主界面-采纳前.png" width="300" alt="主界面">
-  <img src="assets/02-滚动-吸顶压缩态.png" width="300" alt="滚动时结论吸顶">
+  <img src="assets/00-电脑端-展示台布局.png" width="640" alt="电脑端：左侧展示台，右侧可交互界面">
+</p>
+<p align="center">
+  <img src="assets/01-手机端-首屏.png" width="230" alt="手机端首屏">
+  <img src="assets/02-手机端-吸顶与指标.png" width="230" alt="滚动时结论吸顶">
 </p>
 
 <h1 align="center">麦麦营养红绿灯</h1>
