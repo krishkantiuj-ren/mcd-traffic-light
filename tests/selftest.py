@@ -152,6 +152,30 @@ def main() -> int:
     distinct = {tuple(v["swaps"]) for v in per_mode.values()}
     check("T8 替换方案至少两档不同", len(distinct) >= 2, True)
 
+    print("\nT9 补短板不得同 role 叠加（防止「补着补着多两杯饮料」）")
+
+    role_of = {e["name"]: e["role"] for e in catalog.values()}
+
+    # ① 三档的 top-2 不得两条都是 drink（菜单里饮品占近一半，最容易塌缩）
+    for mode in N.MODE_ORDER:
+        t = N.targets_for(mode, N.DEFAULT_MODES[mode]["targets"])
+        gaps = N.suggest_gaps(base_items, catalog, t, mode=mode)
+        roles = [role_of.get(g["add"], "?") for g in gaps]
+        two_drinks = len([r for r in roles if r == "drink"]) >= 2
+        check(f"T9 {N.DEFAULT_MODES[mode]['name']} 不同时推两杯饮料", two_drinks, False)
+
+    # ② 语义：餐盘里已有效补过钙的饮料（燕麦奶 438mg），不得再推第二杯饮料
+    t = N.targets_for("weichi", N.DEFAULT_MODES["weichi"]["targets"])
+    with_oat = base_items + [{"name": "燕麦奶", "qty": 1}]
+    gaps2 = N.suggest_gaps(with_oat, catalog, t, mode="weichi")
+    check("T9 已有燕麦奶后不再推饮料",
+          [g["add"] for g in gaps2 if role_of.get(g["add"]) == "drink"], [])
+
+    # ③ 反例保护：可乐是"空饮料"（0 蛋白 0 钙），不能因为盘里有它就禁推补钙饮料
+    with_cola = base_items  # base_items 已含可乐
+    gaps3 = N.suggest_gaps(with_cola, catalog, t, mode="weichi")
+    check("T9 盘里有可乐仍应推补钙/蛋白项", len(gaps3) >= 1, True)
+
     print("         三档实测：")
     for mode in N.MODE_ORDER:
         print(f"           {N.DEFAULT_MODES[mode]['name']}  swaps={per_mode[mode]['swaps']}  gaps={per_mode[mode]['gaps']}")

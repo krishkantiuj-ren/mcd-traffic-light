@@ -603,6 +603,9 @@ def suggest_gaps(
 
     `mode` 决定这一档该往哪个缺口使劲：按该档 weights 给 deficits 加权，
     并按 gap_kcal_cap 限制「为了补短板额外吃进多少热量」。
+
+    结果按 role 去重：同一 role（尤其 drink —— 菜单里占近一半且蛋白/钙密度高）
+    最多出现一次，否则 top-2 会反复塌缩成两杯饮料，越补饮料越多。
     """
     strat = strategy_of(mode)
     weights = strat["weights"]
@@ -621,10 +624,21 @@ def suggest_gaps(
     if not deficits:
         return []
 
-    in_tray = {resolve(catalog, it.get("name", ""))["name"] for it in items if resolve(catalog, it.get("name", ""))}
+    # 补齐型角色去重：同一次建议里同 role 只取一条；餐盘里该 role 已有效补过
+    # 缺口也不再推同类（避免"补着补着多了两杯饮料"）。
+    DEDUP_ROLES = ("drink", "dessert", "side")
+
+    in_tray = {
+        resolve(catalog, it.get("name", ""))["name"]
+        for it in items
+        if resolve(catalog, it.get("name", ""))
+    }
+
     candidates = []
     for entry in catalog.values():
-        if entry["name"] in in_tray or entry["role"] not in ("side", "drink", "dessert"):
+        if entry["name"] in in_tray:
+            continue
+        if entry["role"] not in ("side", "drink", "dessert"):
             continue
         if ban and _name_banned(entry["name"], ban):
             continue
@@ -645,13 +659,46 @@ def suggest_gaps(
                 "image": entry["image"],
                 "price": entry["price"],
                 "kcal": round(kcal),
+                "role": entry["role"],
                 "fills": _fill_text(entry, deficits, targets, totals),
                 "efficiency": round(density, 2),
                 "fillsAmount": round(filled, 1),
             }
         )
     candidates.sort(key=lambda c: (c["fillsAmount"], c["efficiency"]), reverse=True)
-    return candidates[:top]
+
+    # 该 role 在餐盘里"有效补了缺口"才算同类已够：只看 deficits 里真正缺的项，
+    # 补掉的量要占到「关心的缺口总量」40% 以上。可乐 0 蛋白 0 钙 → 永远不算数。
+    def role_already_covers(role: str) -> bool:
+        keys = [k for k in deficits if k in ("protein", "calcium", "carb")]
+        if not keys:
+            return False
+        cov = 0.0
+        need = 0.0
+        for it in items:
+            entry = resolve(catalog, it.get("name", ""))
+            if not entry or entry["role"] != role:
+                continue
+            qty = float(it.get("qty", 1) or 1)
+            for k in keys:
+                cov += entry["nut"].get(k, 0.0) * qty
+        for k in keys:
+            need += deficits[k]
+        # 该 role 已把「关心的缺口总量」补掉 40% 以上，才认为同类够了
+        return need > 0 and cov >= need * 0.4
+
+    picked, used_roles = [], set()
+    for c in candidates:
+        role = c["role"]
+        # 同一次建议里同 role 只取一条；餐盘里该 role 已在补缺口也不再推同类
+        if role in DEDUP_ROLES and (role in used_roles or role_already_covers(role)):
+            continue
+        picked.append(c)
+        if role in DEDUP_ROLES:
+            used_roles.add(role)
+        if len(picked) >= top:
+            break
+    return picked
 
 
 def _fill_text(entry: dict, deficits: dict, targets: dict, totals: dict) -> str:
