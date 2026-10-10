@@ -19,9 +19,9 @@
     color:var(--ink);-webkit-font-smoothing:antialiased;
     display:flex;flex-direction:column;align-items:center;gap:20px;
   }
-  .stage{display:flex;gap:52px;align-items:stretch;flex-wrap:wrap;justify-content:center;width:100%;}
+  .stage{display:flex;gap:52px;align-items:flex-start;flex-wrap:wrap;justify-content:center;width:100%;}
   /* ===== 展示台：只在电脑（宽屏）显示，把两侧留白变成信息位 ===== */
-  .board{width:430px;flex:0 0 auto;padding-top:6px;display:flex;flex-direction:column;}
+  .board{width:430px;flex:0 0 auto;padding-top:0;display:flex;flex-direction:column;}
   .board .brand{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
   .board .brand span{font-size:12px;font-weight:700;color:#8A6400;letter-spacing:.5px;}
   .board h2{font-size:29px;font-weight:800;line-height:1.26;letter-spacing:-.5px;}
@@ -53,7 +53,7 @@
   .today .meter{margin-top:13px;height:5px;border-radius:3px;background:#ECE7DD;overflow:hidden;}
   .today .meter i{display:block;height:100%;border-radius:3px;background:var(--green);width:0;transition:width .6s;}
   .today .meter i.warn{background:var(--red);}
-  .board .foot{margin-top:auto;padding-top:16px;border-top:1px solid #E2DCD0;font-size:11.5px;line-height:1.9;
+  .board .foot{margin-top:26px;padding-top:16px;border-top:1px solid #E2DCD0;font-size:11.5px;line-height:1.9;
                color:var(--ink3);text-wrap:balance;}
   .board .foot b{color:var(--ink2);font-weight:600;}
   .scr{
