@@ -469,7 +469,13 @@ async function boot(){
   // 模式切换按钮
   $('mseg').innerHTML = b.modeOrder.map(k =>
     `<span data-m="${k}" class="${k===state.mode?'on':''}">${b.modes[k].name}</span>`).join('');
-  $('mseg').querySelectorAll('span').forEach(sp => sp.onclick = () => { state.mode = sp.dataset.m; refresh(); });
+  $('mseg').querySelectorAll('span').forEach(sp => sp.onclick = () => {
+    if (sp.dataset.m === state.mode) return;
+    state.mode = sp.dataset.m;
+    // 切档要回到「用户原本选的餐盘」再重新评估，否则会把上一档已采纳的替换带进来
+    revertAdopted();
+    refresh();
+  });
 
   // 默认餐盘：优先用真实存在的招牌组合
   state.items = ['巨无霸','薯条','可乐'].filter(n => state.catalog[n]).map(n => ({name:n, qty:1}));
@@ -481,11 +487,6 @@ async function boot(){
 
 /* ---------------- 重新评估 ---------------- */
 async function refresh(){
-  // 餐盘被改动过就不再宣称"已采纳"
-  if (state.adopted && state.appliedSwaps
-      && !state.appliedSwaps.every(s => state.items.some(i => i.name === s.to))) {
-    state.adopted = false; state.appliedSwaps = null;
-  }
   renderTray();
   const body = {items:state.items, mode:state.mode, slot:state.slot, profile:state.profile};
   state.evaluation = await api('/api/evaluate', body);
@@ -564,7 +565,7 @@ function renderTray(){
   }).join('') + '<div class="addrow" id="addrow">＋ 再点一份</div>';
 
   $('tray').querySelectorAll('.step').forEach(el => el.onclick = () => {
-    state.items.splice(+el.dataset.idx, 1); state.adopted = false; refresh();
+    state.items.splice(+el.dataset.idx, 1); revertAdopted(); refresh();
   });
   $('addrow').onclick = openPicker;
   const plus = $('addplus');
@@ -652,6 +653,15 @@ function renderGaps(){
 }
 
 /* ---------------- 采纳 ---------------- */
+// 回到「采纳替换之前」的餐盘，并清掉已采纳标记（切档、改餐盘、点恢复都走它）
+function revertAdopted(){
+  if (state.preAdoptItems) state.items = state.preAdoptItems.map(i => ({...i}));
+  state.preAdoptItems = null;
+  state.adopted = false;
+  state.appliedSwaps = null;
+  state.baseScore = null;
+}
+
 async function adopt(){
   const e = state.evaluation;
   if (!e.swaps.length) return;
@@ -791,9 +801,14 @@ function drawPicker(){
   $('mask').querySelectorAll('.catcol span').forEach(sp => sp.onclick = () => pick(sp.dataset.c));
   $('mask').querySelectorAll('.padd').forEach(el => el.onclick = () => {
     const name = el.dataset.add;
+    // 点餐时若已采纳过替换，先把替换回退，避免「加菜」落在被替换过的餐盘上
+    if (state.adopted) {
+      const extra = state.items.map(i => ({...i}));
+      revertAdopted();
+      state.items = extra;
+    }
     const found = state.items.find(i => i.name === name);
     if (found) found.qty += 1; else state.items.push({name, qty:1});
-    state.adopted = false;
     drawPicker(); renderTray();
   });
   $('closesheet').onclick = () => { $('mask').className = 'mask'; refresh(); };
@@ -811,8 +826,7 @@ function tween(el, from, to, dur){
 
 $('cta').onclick = () => {
   if (state.adopted) {
-    if (state.preAdoptItems) state.items = state.preAdoptItems.map(i => ({...i}));
-    state.adopted = false; state.appliedSwaps = null;
+    revertAdopted();
     refresh();
   } else {
     adopt();
