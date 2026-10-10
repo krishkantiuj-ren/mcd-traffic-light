@@ -202,12 +202,12 @@
 
   .swap{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:12px;transition:border-color .3s,background .3s;}
   .swap .cap{font-size:10.5px;font-weight:700;letter-spacing:1px;color:var(--ink3);margin-bottom:11px;display:flex;justify-content:space-between;}
-  .srow{display:flex;align-items:center;gap:9px;padding:7px 0;font-size:12px;color:var(--ink2);border-bottom:1px solid var(--panel);}
+  .srow{display:flex;align-items:center;gap:8px;padding:7px 0;font-size:12px;color:var(--ink2);border-bottom:1px solid var(--panel);min-width:0;}
   .srow:last-child{border-bottom:none;}
-  .srow .from,.srow .to{font-weight:600;color:var(--ink);white-space:nowrap;}
+  .srow .from,.srow .to{font-weight:600;color:var(--ink);white-space:nowrap;min-width:0;overflow:hidden;text-overflow:ellipsis;}
   .srow .arr{color:#C6BFB2;font-family:var(--num);flex:0 0 auto;}
-  .srow .gain{margin-left:auto;font-family:var(--num);font-size:11px;font-weight:700;padding:3px 8px;border-radius:8px;background:#EAF3E9;color:var(--green);white-space:nowrap;font-variant-numeric:tabular-nums;}
-  .srow .gapgain{font-family:var(--num);font-size:11px;font-weight:700;padding:3px 8px;border-radius:8px;background:#FFF4D6;color:#8A6400;white-space:nowrap;}
+  .srow .gain{margin-left:auto;flex:0 1 auto;min-width:0;font-family:var(--num);font-size:11px;font-weight:700;padding:3px 8px;border-radius:8px;background:#EAF3E9;color:var(--green);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums;}
+  .srow .gapgain{flex:0 1 auto;min-width:0;font-family:var(--num);font-size:11px;font-weight:700;padding:3px 8px;border-radius:8px;background:#FFF4D6;color:#8A6400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .srow .gapadd{margin-left:auto;flex:0 0 auto;font-family:inherit;font-size:11px;font-weight:700;color:#fff;background:var(--red);
     border:none;border-radius:9px;padding:5px 11px;cursor:pointer;white-space:nowrap;transition:background .2s,transform .1s;}
   .srow .gapadd:hover{background:#C0221A;}
