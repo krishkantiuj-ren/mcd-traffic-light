@@ -1,9 +1,9 @@
 <p align="center">
-  <img src="assets/00-电脑端-展示台布局.png" width="640" alt="电脑端：左侧展示台，右侧可交互界面">
+  <img src="assets/00-电脑端-展示台布局.png" width="680" alt="电脑端：左侧说明，右侧可交互的红绿灯判读界面">
 </p>
 <p align="center">
-  <img src="assets/01-手机端-首屏.png" width="230" alt="手机端首屏">
-  <img src="assets/02-手机端-吸顶与指标.png" width="230" alt="滚动时结论吸顶">
+  <img src="assets/01-手机端-首屏.png" width="235" alt="手机端首屏：红绿灯结论 + 本条餐盘与六项营养条">
+  <img src="assets/02-手机端-补短板与替换.png" width="235" alt="智能替换与补短板：薯条→苹果片，以及可一键加入餐盘的加餐建议">
 </p>
 
 <h1 align="center">麦麦营养红绿灯</h1>
