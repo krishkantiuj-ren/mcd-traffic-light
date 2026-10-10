@@ -251,11 +251,17 @@
   .result.show{display:block;}
   .result b{color:var(--ink);font-family:var(--num);}
 
-  /* 添加餐品：宽屏双栏（左分类竖排 / 右商品），窄屏回退横滑胶囊条 */
-  .sheet.wide{width:min(760px,92vw);}
-  .picker{display:flex;gap:16px;align-items:stretch;min-height:0;}
-  .catcol{flex:0 0 148px;max-height:min(60vh,460px);overflow-y:auto;overflow-x:hidden;
-          display:flex;flex-direction:column;gap:3px;padding-right:6px;scrollbar-width:thin;}
+  /* 添加餐品：宽屏双栏（左分类竖排 / 右商品），整窗撑满不留空 */
+  .sheet.wide{width:min(1000px,94vw);height:90vh;max-height:90vh;
+              display:flex;flex-direction:column;padding:0;overflow:hidden;}
+  .wide .phead{flex:0 0 auto;padding:24px 28px 14px;}
+  .wide .phead h3{font-size:18px;}
+  .wide .phead .hint{margin-bottom:0;}
+  .wide .body{flex:1 1 auto;min-height:0;padding:0 28px;display:flex;}
+  .wide .closebtn{flex:0 0 auto;margin:14px 28px 22px;width:auto;}
+  .picker{display:flex;gap:18px;align-items:stretch;min-height:0;flex:1 1 auto;width:100%;}
+  .catcol{flex:0 0 158px;overflow-y:auto;overflow-x:hidden;height:100%;
+          display:flex;flex-direction:column;gap:3px;padding:2px 8px 2px 0;scrollbar-width:thin;}
   .catcol::-webkit-scrollbar{width:5px;}
   .catcol::-webkit-scrollbar-thumb{background:#D8D2C6;border-radius:3px;}
   .catcol span{display:flex;align-items:center;justify-content:space-between;gap:6px;
@@ -265,8 +271,8 @@
   .catcol span:hover{background:var(--panel);}
   .catcol span.on{background:var(--ink);color:#fff;}
   .catcol span.on i{color:rgba(255,255,255,.6);}
-  .plist{flex:1 1 auto;min-width:0;max-height:min(60vh,460px);overflow-y:auto;overflow-x:hidden;
-         padding-right:2px;scrollbar-width:thin;}
+  .plist{flex:1 1 auto;min-width:0;overflow-y:auto;overflow-x:hidden;
+         height:100%;padding-right:4px;scrollbar-width:thin;}
   .plist::-webkit-scrollbar{width:5px;}
   .plist::-webkit-scrollbar-thumb{background:#D8D2C6;border-radius:3px;}
   /* 横向胶囊条：仅窄屏使用 */
@@ -288,7 +294,7 @@
     .picker{display:block;}
     .catcol{display:none;}
     .sheet .cats{display:flex;}
-    .plist{max-height:min(56vh,420px);}
+    .plist{height:auto;}
   }
 </style>
 </head>
@@ -735,12 +741,16 @@ function drawPicker(){
       </div>`).join('');
 
   $('mask').innerHTML = `<div class="sheet wide">
-    <h3>添加餐品</h3>
-    <div class="hint">共 ${state.boot.items.length} 款可计算餐品，营养值来自麦当劳官方 MCP</div>
-    <div class="cats">${cats.map(c => `<span data-c="${c.name}" class="${c.name===cat?.name?'on':''}">${c.name}</span>`).join('')}</div>
-    <div class="picker">
-      <div class="catcol">${cats.map(c => `<span data-c="${c.name}" class="${c.name===cat?.name?'on':''}">${c.name}<i>${(c.items||[]).length}</i></span>`).join('')}</div>
-      <div class="plist">${itemsHTML}</div>
+    <div class="phead">
+      <h3>添加餐品</h3>
+      <div class="hint">共 ${state.boot.items.length} 款可计算餐品，营养值来自麦当劳官方 MCP</div>
+    </div>
+    <div class="body">
+      <div class="cats">${cats.map(c => `<span data-c="${c.name}" class="${c.name===cat?.name?'on':''}">${c.name}</span>`).join('')}</div>
+      <div class="picker">
+        <div class="catcol">${cats.map(c => `<span data-c="${c.name}" class="${c.name===cat?.name?'on':''}">${c.name}<i>${(c.items||[]).length}</i></span>`).join('')}</div>
+        <div class="plist">${itemsHTML}</div>
+      </div>
     </div>
     <button class="closebtn" id="closesheet">完成</button>
   </div>`;
