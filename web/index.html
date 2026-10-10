@@ -251,7 +251,25 @@
   .result.show{display:block;}
   .result b{color:var(--ink);font-family:var(--num);}
 
-  .cats{display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;margin-bottom:6px;}
+  /* 添加餐品：宽屏双栏（左分类竖排 / 右商品），窄屏回退横滑胶囊条 */
+  .sheet.wide{width:min(460px,94vw);}
+  .picker{display:flex;gap:12px;align-items:stretch;min-height:0;}
+  .catcol{flex:0 0 116px;max-height:min(56vh,420px);overflow-y:auto;display:flex;flex-direction:column;gap:3px;
+          padding-right:4px;scrollbar-width:thin;}
+  .catcol::-webkit-scrollbar{width:5px;}
+  .catcol::-webkit-scrollbar-thumb{background:#D8D2C6;border-radius:3px;}
+  .catcol span{display:flex;align-items:center;justify-content:space-between;gap:6px;
+               font-size:12px;font-weight:600;padding:9px 10px;border-radius:10px;
+               background:transparent;color:var(--ink3);cursor:pointer;white-space:nowrap;transition:background .16s,color .16s;}
+  .catcol span i{font-style:normal;font-size:10px;font-weight:700;color:#C2BBB0;flex:0 0 auto;}
+  .catcol span:hover{background:var(--panel);}
+  .catcol span.on{background:var(--ink);color:#fff;}
+  .catcol span.on i{color:rgba(255,255,255,.6);}
+  .plist{flex:1 1 auto;min-width:0;max-height:min(56vh,420px);overflow-y:auto;padding-right:2px;scrollbar-width:thin;}
+  .plist::-webkit-scrollbar{width:5px;}
+  .plist::-webkit-scrollbar-thumb{background:#D8D2C6;border-radius:3px;}
+  /* 横向胶囊条：仅窄屏使用 */
+  .cats{display:none;gap:6px;overflow-x:auto;padding-bottom:10px;margin-bottom:6px;scroll-behavior:smooth;}
   .cats span{flex:0 0 auto;font-size:11px;font-weight:600;padding:6px 11px;border-radius:14px;background:var(--panel);color:var(--ink3);cursor:pointer;white-space:nowrap;}
   .cats span.on{background:var(--ink);color:#fff;}
   .pitem{display:flex;align-items:center;gap:11px;padding:8px 1px;border-bottom:1px solid var(--line);}
@@ -262,6 +280,15 @@
   .pitem .padd{width:24px;height:24px;border-radius:50%;background:var(--yellow);color:var(--ink);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;cursor:pointer;flex:0 0 auto;}
   .closebtn{width:100%;margin-top:12px;border:1px solid var(--line);background:#fff;border-radius:14px;padding:11px 0;font-family:inherit;font-size:13px;font-weight:600;color:var(--ink2);cursor:pointer;}
   .loadingscreen{padding:60px 20px;text-align:center;font-size:12px;color:var(--ink3);line-height:2;}
+
+  /* 窄屏：分类竖栏换成横滑胶囊条（放在末尾，确保覆盖上面的基础规则） */
+  @media (max-width:600px){
+    .sheet.wide{width:min(420px,94vw);}
+    .picker{display:block;}
+    .catcol{display:none;}
+    .sheet .cats{display:flex;}
+    .plist{max-height:min(52vh,380px);}
+  }
 </style>
 </head>
 <body>
@@ -688,19 +715,64 @@ function drawPicker(){
   const cats = state.categories;
   const cat = cats.find(c => c.name === state.pickerCat) || cats[0];
   const list = (cat ? cat.items : []).map(n => state.catalog[n]).filter(Boolean);
-  $('mask').innerHTML = `<div class="sheet">
-    <h3>添加餐品</h3>
-    <div class="hint">共 ${state.boot.items.length} 款可计算餐品，营养值来自麦当劳官方 MCP</div>
-    <div class="cats">${cats.map(c => `<span data-c="${c.name}" class="${c.name===cat?.name?'on':''}">${c.name}</span>`).join('')}</div>
-    <div>${list.map(e => `<div class="pitem">
+
+  // 重绘前记住两栏各自的滚动位置，重绘后还原，避免"跳回顶部"
+  const prev = $('mask').querySelector('.catcol');
+  const prevList = $('mask').querySelector('.plist');
+  const prevCats = $('mask').querySelector('.cats');
+  const keep = {
+    col: prev ? prev.scrollTop : 0,
+    list: prevList ? prevList.scrollTop : 0,
+    cats: prevCats ? prevCats.scrollLeft : 0,
+  };
+
+  const itemsHTML = list.map(e => `<div class="pitem">
         <div class="pthumb"><img src="${e.image}" alt=""></div>
         <div class="pname">${e.name}</div>
         <div class="pkcal">${Math.round(e.nut.kcal)} kcal</div>
         <div class="padd" data-add="${e.name}">＋</div>
-      </div>`).join('')}</div>
+      </div>`).join('');
+
+  $('mask').innerHTML = `<div class="sheet wide">
+    <h3>添加餐品</h3>
+    <div class="hint">共 ${state.boot.items.length} 款可计算餐品，营养值来自麦当劳官方 MCP</div>
+    <div class="cats">${cats.map(c => `<span data-c="${c.name}" class="${c.name===cat?.name?'on':''}">${c.name}</span>`).join('')}</div>
+    <div class="picker">
+      <div class="catcol">${cats.map(c => `<span data-c="${c.name}" class="${c.name===cat?.name?'on':''}">${c.name}<i>${(c.items||[]).length}</i></span>`).join('')}</div>
+      <div class="plist">${itemsHTML}</div>
+    </div>
     <button class="closebtn" id="closesheet">完成</button>
   </div>`;
-  $('mask').querySelectorAll('.cats span').forEach(sp => sp.onclick = () => { state.pickerCat = sp.dataset.c; drawPicker(); });
+
+  // 还原滚动位置
+  const col = $('mask').querySelector('.catcol');
+  const pl = $('mask').querySelector('.plist');
+  const cb = $('mask').querySelector('.cats');
+  if (col) col.scrollTop = keep.col;
+  if (pl) pl.scrollTop = keep.list;
+  if (cb) cb.scrollLeft = keep.cats;
+
+  const pick = name => {
+    state.pickerCat = name;
+    drawPicker();
+    // 选中项滚入可视区：手动滚容器，避免 scrollIntoView 连带滚动遮罩后的页面
+    const col = $('mask').querySelector('.catcol');
+    const onCol = $('mask').querySelector('.catcol span.on');
+    if (col && onCol) {
+      const ct = onCol.offsetTop, ch = onCol.offsetHeight;
+      const view = col.scrollTop, h = col.clientHeight;
+      if (ct < view) col.scrollTop = ct - 8;
+      else if (ct + ch > view + h) col.scrollTop = ct + ch - h + 8;
+    }
+    const bar = $('mask').querySelector('.cats');
+    const onChip = $('mask').querySelector('.cats span.on');
+    if (bar && onChip) {
+      const left = onChip.offsetLeft, w = onChip.offsetWidth;
+      bar.scrollLeft = left - (bar.clientWidth - w) / 2;
+    }
+  };
+  $('mask').querySelectorAll('.cats span').forEach(sp => sp.onclick = () => pick(sp.dataset.c));
+  $('mask').querySelectorAll('.catcol span').forEach(sp => sp.onclick = () => pick(sp.dataset.c));
   $('mask').querySelectorAll('.padd').forEach(el => el.onclick = () => {
     const name = el.dataset.add;
     const found = state.items.find(i => i.name === name);
