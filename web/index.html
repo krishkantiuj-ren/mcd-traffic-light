@@ -20,29 +20,41 @@
     color:var(--ink);-webkit-font-smoothing:antialiased;
     display:flex;flex-direction:column;align-items:center;gap:20px;
   }
-  .stage{display:flex;gap:44px;align-items:flex-start;flex-wrap:wrap;justify-content:center;width:100%;}
+  .stage{display:flex;gap:52px;align-items:stretch;flex-wrap:wrap;justify-content:center;width:100%;}
   /* ===== 展示台：只在电脑（宽屏）显示，把两侧留白变成信息位 ===== */
-  .board{width:392px;flex:0 0 auto;padding-top:6px;}
-  .board .brand{display:flex;align-items:center;gap:9px;margin-bottom:14px;}
-  .board .brand svg{width:26px;height:26px;flex:0 0 auto;}
-  .board .brand span{font-size:13px;font-weight:700;color:#8A6400;letter-spacing:.6px;}
-  .board h2{font-size:28px;font-weight:800;line-height:1.24;letter-spacing:-.4px;}
+  .board{width:430px;flex:0 0 auto;padding-top:6px;display:flex;flex-direction:column;}
+  .board .brand{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+  .board .brand span{font-size:12px;font-weight:700;color:#8A6400;letter-spacing:.5px;}
+  .board h2{font-size:29px;font-weight:800;line-height:1.26;letter-spacing:-.5px;}
   .board h2 em{font-style:normal;color:var(--red);}
-  .board .lede{font-size:13.5px;line-height:1.85;color:var(--ink2);margin-top:12px;}
+  .board .lede{font-size:13.5px;line-height:1.9;color:var(--ink2);margin-top:13px;}
   .board .lede b{color:var(--ink);font-weight:700;}
-  .board .kicker{margin-top:22px;font-size:11px;font-weight:700;letter-spacing:1.6px;color:var(--ink3);}
-  .steps{display:flex;align-items:stretch;gap:0;margin-top:11px;}
-  .steps .s{flex:1;background:#fff;border:1px solid var(--line);border-radius:13px;padding:11px 9px 12px;text-align:center;}
-  .steps .s .n{font-family:var(--num);font-size:19px;font-weight:800;color:var(--red);line-height:1;}
-  .steps .s .t{font-size:12px;font-weight:700;margin-top:6px;}
+  .board .kicker{margin-top:24px;font-size:11px;font-weight:700;letter-spacing:1.6px;color:var(--ink3);}
+  .steps{display:flex;align-items:stretch;gap:0;margin-top:12px;}
+  .steps .s{flex:1;background:#fff;border:1px solid var(--line);border-radius:13px;padding:12px 8px 13px;text-align:center;}
+  .steps .s .n{font-family:var(--num);font-size:20px;font-weight:800;color:var(--red);line-height:1;}
+  .steps .s .t{font-size:12px;font-weight:700;margin-top:7px;}
   .steps .s .d{font-size:10.5px;color:var(--ink3);margin-top:3px;line-height:1.45;}
   .steps .a{flex:0 0 16px;display:flex;align-items:center;justify-content:center;color:#C6BFB2;font-size:13px;}
-  .diff{margin-top:11px;display:flex;flex-direction:column;gap:8px;}
-  .diff .d{display:flex;gap:9px;font-size:12.5px;line-height:1.7;color:var(--ink2);}
+  .diff{margin-top:12px;display:flex;flex-direction:column;gap:9px;}
+  .diff .d{display:flex;gap:9px;font-size:12.5px;line-height:1.72;color:var(--ink2);}
   .diff .d i{flex:0 0 auto;width:16px;height:16px;margin-top:3px;border-radius:50%;background:#FFF4D6;
              color:#8A6400;font-style:normal;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;}
   .diff .d b{color:var(--ink);font-weight:700;}
-  .board .foot{margin-top:20px;padding-top:13px;border-top:1px solid #E2DCD0;font-size:11.5px;line-height:1.8;color:var(--ink3);}
+  /* 今日已吃：把这块实时数据放到展示台，右侧卡片与左侧等高 */
+  .today{margin-top:24px;border:1px solid var(--line);border-radius:14px;background:#fff;padding:14px 15px 15px;}
+  .today .th{font-size:11px;font-weight:700;letter-spacing:1.6px;color:var(--ink3);display:flex;justify-content:space-between;align-items:baseline;}
+  .today .th em{font-style:normal;font-weight:600;letter-spacing:0;color:#C2BBB0;font-size:10.5px;}
+  .today .grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:12px;}
+  .today .cell{text-align:left;}
+  .today .cell b{display:block;font-family:var(--num);font-size:21px;font-weight:800;line-height:1.1;font-variant-numeric:tabular-nums;}
+  .today .cell span{font-size:11px;color:var(--ink3);}
+  .today .cell.warn b{color:var(--red);}
+  .today .cell.ok b{color:var(--green);}
+  .today .meter{margin-top:13px;height:5px;border-radius:3px;background:#ECE7DD;overflow:hidden;}
+  .today .meter i{display:block;height:100%;border-radius:3px;background:var(--green);width:0;transition:width .6s;}
+  .today .meter i.warn{background:var(--red);}
+  .board .foot{margin-top:auto;padding-top:16px;border-top:1px solid #E2DCD0;font-size:11.5px;line-height:1.85;color:var(--ink3);}
   .board .foot b{color:var(--ink2);font-weight:600;}
   .scr{
     width:340px;background:#fff;border-radius:36px;overflow:hidden;
@@ -69,7 +81,12 @@
   .content{padding:14px 20px 16px;}
 
   .titlerow{display:flex;align-items:center;gap:9px;margin:9px 0 13px;}
-  .titlerow .mk{width:20px;height:20px;flex:0 0 auto;}
+  /* 麦当劳金色拱门：两个并列半圆，M 形，官方比例宽高约 1.62:1 */
+  .arches{display:block;flex:0 0 auto;}
+  .titlerow .arches{width:26px;height:17px;}
+  .board .brand .arches{width:30px;height:19px;}
+  /* 真实门店/品牌图位 */
+  .brandimg{display:block;border-radius:8px;object-fit:contain;}
   .titlerow h1{font-size:20px;font-weight:800;line-height:1.1;color:#fff;}
   .badge{margin-left:auto;font-size:9.5px;font-weight:700;padding:3px 8px;border-radius:8px;background:rgba(255,255,255,.24);color:#fff;}
 
@@ -109,7 +126,13 @@
   .hinfo .st{font-size:19px;font-weight:800;margin-bottom:4px;}
   .hinfo .ds{font-size:11.5px;color:rgba(255,255,255,.88);line-height:1.5;margin-bottom:9px;}
   .hinfo .warn{display:inline-block;font-size:10.5px;font-weight:700;background:rgba(255,255,255,.22);padding:4px 10px;border-radius:8px;font-variant-numeric:tabular-nums;}
-  .daystrip{margin-top:13px;padding-top:11px;border-top:1px solid rgba(255,255,255,.24);font-size:10.5px;color:rgba(255,255,255,.9);display:flex;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums;}
+  .daystrip{margin-top:13px;padding-top:11px;border-top:1px solid rgba(255,255,255,.24);
+            font-size:10.5px;color:rgba(255,255,255,.9);display:flex;align-items:center;justify-content:space-between;
+            gap:10px;font-variant-numeric:tabular-nums;}
+  .daystrip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .daystrip .bar{flex:1 1 auto;min-width:26px;height:4px;border-radius:2px;background:rgba(255,255,255,.28);position:relative;}
+  .daystrip .bar i{position:absolute;inset:0 auto 0 0;border-radius:2px;background:#fff;width:0;transition:width .5s;}
+  .daystrip .bad{color:#FFE9A8;font-weight:700;}
 
   .seg{display:flex;background:#E7E2D8;border-radius:22px;padding:3px;margin-bottom:12px;}
   .seg span{flex:1;text-align:center;font-size:12px;font-weight:500;padding:7px 0;border-radius:19px;color:var(--ink3);transition:.25s;cursor:pointer;}
@@ -229,8 +252,8 @@
 
   <aside class="board">
     <div class="brand">
-      <svg viewBox="0 0 24 24" fill="none"><path d="M3 19 C3 9, 8 5, 12 5 C16 5, 21 9, 21 19" stroke="#FFC72C" stroke-width="3.4" stroke-linecap="round"/></svg>
-      <span>基于麦当劳官方 MCP</span>
+      <svg class="arches" viewBox="0 0 100 62" aria-label="麦当劳金色拱门"><path d="M7 62 V34 C7 15 16 5 26 5 C34 5 39 11 41 22 L50 62 L59 22 C61 11 66 5 74 5 C84 5 93 15 93 34 V62" fill="none" stroke="#FFC72C" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>麦当劳官方 MCP · 实时数据</span>
     </div>
     <h2>点餐那一刻，<br>帮你判断<em>这一顿行不行</em>。</h2>
     <p class="lede">
@@ -262,12 +285,21 @@
         替换方案会计算券损失。</span></div>
     </div>
 
+    <div class="today">
+      <div class="th"><span>今日已吃 · 实时</span><em>只存本机</em></div>
+      <div class="grid">
+        <div class="cell"><b id="bdMeals">0</b><span>餐次</span></div>
+        <div class="cell"><b id="bdKcal">0</b><span>kcal 热量</span></div>
+        <div class="cell" id="bdNaCell"><b id="bdNa">0</b><span>mg 钠 / 2000</span></div>
+      </div>
+      <div class="meter"><i id="bdNaBar"></i></div>
+    </div>
+
     <p class="foot">
       数据来自麦当劳官方 MCP 实时接口（<b>mcp.mcd.cn</b>），断网自动降级到本地快照。<br>
       只谈麦当劳自己的餐品，不做任何跨品牌对比。输出仅供参考，不构成医疗或营养建议。
     </p>
   </aside>
-
   <div class="segwrap" id="segwrap">
     <div class="prow" id="profilebar">
       <span class="pico"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#DA291C" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20a6.5 6.5 0 0 1 13 0"/></svg></span>
@@ -283,7 +315,7 @@
     <div class="hero" id="hero">
       <div class="statusbar"><span>9:41</span><span>5G&nbsp;&nbsp;100%</span></div>
       <div class="titlerow">
-        <svg class="mk" viewBox="0 0 24 24" fill="none"><path d="M3 19 C3 9, 8 5, 12 5 C16 5, 21 9, 21 19" stroke="#fff" stroke-width="3.4" stroke-linecap="round"/></svg>
+        <svg class="arches" viewBox="0 0 100 62" aria-label="麦当劳金色拱门"><path d="M7 62 V34 C7 15 16 5 26 5 C34 5 39 11 41 22 L50 62 L59 22 C61 11 66 5 74 5 C84 5 93 15 93 34 V62" fill="none" stroke="#fff" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/></svg>
         <h1>麦麦营养红绿灯</h1>
         <span class="badge" id="srcbadge">连接中…</span>
       </div>
@@ -422,11 +454,34 @@ function renderHero(){
 
 function renderDay(){
   const e = state.evaluation, d = e.day;
-  if (!d || !d.mealCount) { $('daystrip').innerHTML = '<span>今日尚未记录其他餐次</span><span>记录后自动累计</span>'; return; }
-  const sodiumTarget = (d.targets && d.targets.sodium) || 2000;
+  const target = (d && d.targets && d.targets.sodium) || 2000;
+  const eaten = Math.round((d && d.eaten && d.eaten.sodium) || 0);
+  const kcal = Math.round((d && d.eaten && d.eaten.kcal) || 0);
+  const meals = (d && d.mealCount) || 0;
+
+  // 展示台的「今日已吃」面板（宽屏才有，窄屏元素不存在时静默跳过）
+  if ($('bdMeals')) {
+    $('bdMeals').textContent = meals;
+    $('bdKcal').textContent = kcal;
+    $('bdNa').textContent = eaten;
+    const over = eaten > target;
+    $('bdNaCell').className = 'cell ' + (over ? 'warn' : eaten > target * .7 ? '' : 'ok');
+    const bar = $('bdNaBar');
+    bar.style.width = Math.min(100, eaten / target * 100).toFixed(1) + '%';
+    bar.className = over ? 'warn' : '';
+  }
+
+  if (!meals) {
+    $('daystrip').innerHTML = '<span>今日尚未记录其他餐次</span><span style="flex:0 0 auto">记录后自动累计</span>';
+    return;
+  }
   const left = Math.round((d.remaining && d.remaining.sodium) || 0);
+  const over = eaten > target;
+  // 三列改两列 + 进度条：数字再长也不会把文案挤掉
   $('daystrip').innerHTML =
-    `<span>今日已吃 ${d.mealCount} 餐</span><span>钠 ${Math.round(d.eaten.sodium)}/${sodiumTarget} mg</span><span>本餐还可吃 ${left} mg</span>`;
+    `<span>今日 ${meals} 餐 · 钠 ${eaten}/${target}</span>`
+    + `<span class="bar"><i style="width:${Math.min(100, eaten / target * 100).toFixed(1)}%"></i></span>`
+    + `<span class="${over ? 'bad' : ''}" style="flex:0 0 auto">${over ? '已超' + (eaten - target) : '还可吃 ' + left} mg</span>`;
 }
 
 /* ---------------- 餐盘 ---------------- */
