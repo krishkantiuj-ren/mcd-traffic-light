@@ -207,7 +207,12 @@
   .srow .from,.srow .to{font-weight:600;color:var(--ink);white-space:nowrap;}
   .srow .arr{color:#C6BFB2;font-family:var(--num);flex:0 0 auto;}
   .srow .gain{margin-left:auto;font-family:var(--num);font-size:11px;font-weight:700;padding:3px 8px;border-radius:8px;background:#EAF3E9;color:var(--green);white-space:nowrap;font-variant-numeric:tabular-nums;}
-  .srow .gapgain{margin-left:auto;font-family:var(--num);font-size:11px;font-weight:700;padding:3px 8px;border-radius:8px;background:#FFF4D6;color:#8A6400;white-space:nowrap;}
+  .srow .gapgain{font-family:var(--num);font-size:11px;font-weight:700;padding:3px 8px;border-radius:8px;background:#FFF4D6;color:#8A6400;white-space:nowrap;}
+  .srow .gapadd{margin-left:auto;flex:0 0 auto;font-family:inherit;font-size:11px;font-weight:700;color:#fff;background:var(--red);
+    border:none;border-radius:9px;padding:5px 11px;cursor:pointer;white-space:nowrap;transition:background .2s,transform .1s;}
+  .srow .gapadd:hover{background:#C0221A;}
+  .srow .gapadd:active{transform:scale(.94);}
+  .srow .gapadd.added{background:#EAF3E9;color:var(--green);cursor:default;}
   .snote{font-size:10.5px;color:var(--amber);margin-top:8px;padding-top:8px;border-top:1px solid var(--panel);}
   .strat{font-size:10.5px;color:var(--ink3);background:var(--panel);border-radius:8px;padding:5px 9px;margin-bottom:10px;line-height:1.55;}
   .strat b{color:var(--ink2);font-weight:700;}
@@ -434,7 +439,7 @@ const DOT = {green:'#3E8E41', amber:'#C8860D', red:'#DA291C'};
 
 const state = {
   boot:null, catalog:{}, categories:[], items:[], mode:'weichi', slot:'正餐',
-  profile:null, evaluation:null, adopted:false, prevScore:null, pickerCat:null
+  profile:null, evaluation:null, adopted:false, prevScore:null, pickerCat:null, appliedGaps:[]
 };
 
 const $ = id => document.getElementById(id);
@@ -636,20 +641,56 @@ function renderSwap(){
 /* ---------------- 补短板 ---------------- */
 function renderGaps(){
   const e = state.evaluation, box = $('gapbox');
-  if (!e.gaps.length){ box.style.display = 'none'; return; }
+  const added = state.appliedGaps || [];
   box.style.display = 'block';
-  box.innerHTML = `<div class="cap"><span>补短板 · 加什么</span></div>`
+  if (!e.gaps.length){
+    // 不再整块隐藏：明确告诉用户"为什么没了"，避免突兀消失
+    box.innerHTML = `<div class="cap"><span>补短板 · 加什么</span></div>`
+      + (e.strategy ? `<div class="strat"><b>${e.modeName}策略</b>：${e.strategy}</div>` : '')
+      + `<div class="empty">${added.length
+          ? `已加入 <b>${[...new Set(added)].join('、')}</b>，本档达标项已补齐，暂无需要额外补充的短板。`
+          : '这一餐的达标项已经够了，无需再额外加菜。'}</div>`;
+    return;
+  }
+  box.innerHTML = `<div class="cap"><span>补短板 · 加什么</span><span>缺什么补什么</span></div>`
     + (e.strategy ? `<div class="strat"><b>${e.modeName}策略</b>：${e.strategy}</div>` : '')
-    + e.gaps.map(g => `<div class="srow">
-        <span class="to">＋ ${g.add}</span>
-        <span style="color:var(--ink3)">${g.kcal} kcal · ¥${money(g.price)}</span>
-        <span class="gapgain">${g.fills.split('（')[0]}</span>
-      </div>`).join('')
+    + e.gaps.map(g => {
+        const on = added.includes(g.add);
+        return `<div class="srow">
+          <span class="to">＋ ${g.add}</span>
+          <span style="color:var(--ink3)">${g.kcal} kcal · ¥${money(g.price)}</span>
+          <span class="gapgain">${g.fills.split('（')[0]}</span>
+          <button class="gapadd${on?' added':''}" data-gapadd="${g.add}" ${on?'disabled':''}>${on?'已加入':'加入餐盘'}</button>
+        </div>`;
+      }).join('')
     + `<div class="facts">
         <div class="fact">热量约等于<b>${e.equivalents.riceBowls} 碗米饭</b></div>
         <div class="fact">钠约等于<b>${e.equivalents.saltGram} 克盐</b></div>
         <div class="fact">快走消耗<b>${e.equivalents.walkMinutes} 分钟</b></div>
       </div>`;
+  box.querySelectorAll('[data-gapadd]').forEach(el => el.onclick = () => addGap(el.dataset.gapadd, el));
+}
+
+// 补短板：把建议条目真实加进餐盘（会花钱、会涨热量），加完立即重算
+async function addGap(name, btn){
+  if (!name || !state.catalog[name] || state._gapBusy) return;
+  state._gapBusy = true;
+  if (btn) { btn.disabled = true; btn.textContent = '已加入'; btn.classList.add('added'); }
+  try {
+    // 若先前采纳过替换，先把替换回退，避免"补短板"落在被换过的餐盘上
+    if (state.adopted) {
+      const extra = state.items.map(i => ({...i}));
+      revertAdopted();
+      state.items = extra;
+    }
+    const found = state.items.find(i => i.name === name);
+    if (found) found.qty += 1; else state.items.push({name, qty:1});
+    state.appliedGaps = [...(state.appliedGaps || []), name];
+    await api('/api/day', {items:state.items, slot:state.slot, mode:state.mode});
+    await refresh();
+  } finally {
+    state._gapBusy = false;
+  }
 }
 
 /* ---------------- 采纳 ---------------- */
@@ -660,6 +701,7 @@ function revertAdopted(){
   state.adopted = false;
   state.appliedSwaps = null;
   state.baseScore = null;
+  state.appliedGaps = [];
 }
 
 async function adopt(){
