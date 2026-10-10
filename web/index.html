@@ -40,6 +40,23 @@
   .diff .d i{flex:0 0 auto;width:16px;height:16px;margin-top:3px;border-radius:50%;background:#FFF4D6;
              color:#8A6400;font-style:normal;font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;}
   .diff .d b{color:var(--ink);font-weight:700;}
+  /* 六项指标判灯规则：与 src/nutrition.py 的 level_of() 完全一致 */
+  .legend{margin-top:12px;display:flex;flex-direction:column;gap:8px;}
+  .legend .lg{display:grid;grid-template-columns:10px 1fr auto;align-items:center;gap:0 9px;
+              border:1px solid var(--line);border-radius:13px;background:#fff;padding:11px 13px;}
+  .legend .dot{width:8px;height:8px;border-radius:50%;justify-self:center;}
+  .legend .dot.r{background:var(--red);}
+  .legend .dot.g{background:var(--green);}
+  .legend .lb{display:flex;align-items:baseline;gap:7px;min-width:0;}
+  .legend .lb b{font-size:12.5px;font-weight:700;color:var(--ink);white-space:nowrap;}
+  .legend .lb em{font-style:normal;font-size:10.5px;color:var(--ink3);white-space:nowrap;}
+  .legend .rule{display:flex;align-items:center;gap:4px;font-size:10.5px;color:var(--ink3);white-space:nowrap;}
+  .legend .rule .t{font-style:normal;font-weight:700;padding:2px 6px;border-radius:6px;font-size:10px;}
+  .legend .rule .t.r{background:#FBE9E7;color:var(--red);}
+  .legend .rule .t.a{background:#FFF4D6;color:#8A6400;}
+  .legend .rule .t.g{background:#E8F3E4;color:var(--green);}
+  .legend .note{grid-template-columns:1fr;font-size:11px;line-height:1.7;color:var(--ink3);
+                background:transparent;border:none;padding:2px 2px 0;}
   /* 今日已吃：把这块实时数据放到展示台，右侧卡片与左侧等高 */
   .today{margin-top:24px;border:1px solid var(--line);border-radius:14px;background:#fff;padding:14px 15px 15px;}
   .today .th{font-size:11px;font-weight:700;letter-spacing:1.6px;color:var(--ink3);display:flex;justify-content:space-between;align-items:baseline;}
@@ -284,6 +301,15 @@
         顶部实时显示"今日已吃几餐、本餐还能吃多少钠"。</span></div>
       <div class="d"><i>4</i><span><b>不让健康建议变成多花钱</b> —— 手里有券时，
         替换方案会算券损失。</span></div>
+    </div>
+
+    <div class="kicker">六项指标怎么判</div>
+    <div class="legend">
+      <div class="lg cap"><span class="dot r"></span><div class="lb"><b>能量 · 脂肪 · 钠</b><em>限上限</em></div>
+        <div class="rule"><i class="t r">＞1.5 倍</i>红 <i class="t a">＞1 倍</i>黄 <i class="t g">以内</i>绿</div></div>
+      <div class="lg need"><span class="dot g"></span><div class="lb"><b>蛋白质 · 碳水 · 钙</b><em>要够量</em></div>
+        <div class="rule"><i class="t g">达标</i>绿 <i class="t a">≥70%</i>黄 <i class="t r">不足</i>红</div></div>
+      <div class="lg note">单餐目标＝每日推荐量的 ⅓；填了身体数据后按 Mifflin-St Jeor 公式重算。</div>
     </div>
 
     <div class="today">
